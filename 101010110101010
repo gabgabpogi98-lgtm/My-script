@@ -1,0 +1,681 @@
+local UserInputService = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
+local Players = game:GetService("Players")
+local StarterGui = game:GetService("StarterGui")
+
+local player = Players.LocalPlayer
+local character = player.Character or player.CharacterAdded:Wait()
+local humanoid = character:WaitForChild("Humanoid")
+local mouse = player:GetMouse()
+
+-- Create ScreenGui
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = "KeySystemMenu"
+screenGui.ResetOnSpawn = false
+screenGui.Parent = player:WaitForChild("PlayerGui")
+
+-- Dragging helpers
+local dragging
+local dragInput
+local dragStart
+local startPos
+
+local function updateGuiPosition(input)
+\tlocal delta = input.Position - dragStart
+\tscreenGui.MainFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+end
+
+-- Main Frame (initially login)
+local mainFrame = Instance.new("Frame")
+mainFrame.Name = "MainFrame"
+mainFrame.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+mainFrame.BorderSizePixel = 0
+mainFrame.Size = UDim2.new(0, 400, 0, 320)
+mainFrame.Position = UDim2.new(0.5, -200, 0.5, -160)
+mainFrame.Parent = screenGui
+screenGui.MainFrame = mainFrame
+
+-- Make mainFrame draggable
+mainFrame.InputBegan:Connect(function(input)
+\tif input.UserInputType == Enum.UserInputType.MouseButton1 then
+\t\tdragging = true
+\t\tdragStart = input.Position
+\t\tstartPos = mainFrame.Position
+\t\tinput.Changed:Connect(function()
+\t\t\tif input.UserInputState == Enum.UserInputState.End then
+\t\t\t\tdragging = false
+\t\t\tend
+\t\tend)
+\tend
+end)
+
+mainFrame.InputChanged:Connect(function(input)
+\tif input.UserInputType == Enum.UserInputType.MouseMovement then
+\t\tdragInput = input
+\tend
+end)
+
+UserInputService.InputChanged:Connect(function(input)
+\tif input == dragInput and dragging then
+\t\tupdateGuiPosition(input)
+\tend
+end)
+
+-- Title
+local title = Instance.new("TextLabel")
+title.Name = "Title"
+title.Size = UDim2.new(1, 0, 0, 40)
+title.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+title.BorderSizePixel = 0
+title.Text = "Key System Menu"
+title.TextColor3 = Color3.new(1, 1, 1)
+title.Font = Enum.Font.GothamBold
+title.TextSize = 22
+title.Parent = mainFrame
+
+-- Key input UI
+local keyInputLabel = Instance.new("TextLabel")
+keyInputLabel.Name = "KeyLabel"
+keyInputLabel.Position = UDim2.new(0, 20, 0, 60)
+keyInputLabel.Size = UDim2.new(0, 60, 0, 30)
+keyInputLabel.BackgroundTransparency = 1
+keyInputLabel.Text = "Key:"
+keyInputLabel.TextColor3 = Color3.new(1, 1, 1)
+keyInputLabel.Font = Enum.Font.Gotham
+keyInputLabel.TextSize = 18
+keyInputLabel.TextXAlignment = Enum.TextXAlignment.Left
+keyInputLabel.Parent = mainFrame
+
+local keyInputBox = Instance.new("TextBox")
+keyInputBox.Name = "KeyInput"
+keyInputBox.Position = UDim2.new(0, 85, 0, 60)
+keyInputBox.Size = UDim2.new(0, 200, 0, 30)
+keyInputBox.ClearTextOnFocus = false
+keyInputBox.Text = ""
+keyInputBox.Font = Enum.Font.Gotham
+keyInputBox.TextSize = 18
+keyInputBox.TextColor3 = Color3.new(0, 0, 0)
+keyInputBox.BackgroundColor3 = Color3.new(1, 1, 1)
+keyInputBox.Parent = mainFrame
+
+-- Get Key button: copies discord link
+local getKeyButton = Instance.new("TextButton")
+getKeyButton.Name = "GetKeyButton"
+getKeyButton.Position = UDim2.new(0, 60, 0, 110)
+getKeyButton.Size = UDim2.new(0, 130, 0, 30)
+getKeyButton.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+getKeyButton.TextColor3 = Color3.new(1, 1, 1)
+getKeyButton.Font = Enum.Font.GothamBold
+getKeyButton.TextSize = 18
+getKeyButton.Text = "Get Key"
+getKeyButton.Parent = mainFrame
+
+getKeyButton.MouseButton1Click:Connect(function()
+\t-- Copy "discord.gg/WzrtHnTfS" to clipboard
+\tpcall(function()
+\t\tsetclipboard("discord.gg/WzrtHnTfS")
+\t\tgetKeyButton.Text = "Copied!"
+\t\twait(2)
+\t\tgetKeyButton.Text = "Get Key"
+\tend)
+end)
+
+-- Submit button: checks for password
+local submitButton = Instance.new("TextButton")
+submitButton.Name = "SubmitButton"
+submitButton.Position = UDim2.new(0, 200, 0, 110)
+submitButton.Size = UDim2.new(0, 130, 0, 30)
+submitButton.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+submitButton.TextColor3 = Color3.new(1, 1, 1)
+submitButton.Font = Enum.Font.GothamBold
+submitButton.TextSize = 18
+submitButton.Text = "Submit"
+submitButton.Parent = mainFrame
+
+local errorLabel = Instance.new("TextLabel")
+errorLabel.Name = "ErrorLabel"
+errorLabel.Position = UDim2.new(0, 20, 0, 150)
+errorLabel.Size = UDim2.new(1, -40, 0, 30)
+errorLabel.BackgroundTransparency = 1
+errorLabel.Text = ""
+errorLabel.TextColor3 = Color3.fromRGB(255, 80, 80)
+errorLabel.Font = Enum.Font.Gotham
+errorLabel.TextSize = 16
+errorLabel.Parent = mainFrame
+
+-- Tabs container (will replace key input UI after successful login)
+local tabsFrame = Instance.new("Frame")
+tabsFrame.Name = "TabsFrame"
+tabsFrame.Size = UDim2.new(1, 0, 1, -40)
+tabsFrame.Position = UDim2.new(0, 0, 0, 40)
+tabsFrame.BackgroundTransparency = 1
+tabsFrame.Visible = false
+tabsFrame.Parent = mainFrame
+
+-- Tabs buttons
+local tabButtonsFrame = Instance.new("Frame")
+tabButtonsFrame.Name = "TabButtonsFrame"
+tabButtonsFrame.Size = UDim2.new(1, 0, 0, 40)
+tabButtonsFrame.Position = UDim2.new(0, 0, 0, 0)
+tabButtonsFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+tabButtonsFrame.BorderSizePixel = 0
+tabButtonsFrame.Parent = mainFrame
+
+local function createTabButton(name, position)
+\tlocal button = Instance.new("TextButton")
+\tbutton.Name = name .. "TabButton"
+\tbutton.Size = UDim2.new(0, 200, 1, 0)
+\tbutton.Position = position
+\tbutton.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+\tbutton.TextColor3 = Color3.new(1, 1, 1)
+\tbutton.Font = Enum.Font.GothamSemibold
+\tbutton.TextSize = 18
+\tbutton.Text = name
+\tbutton.Parent = tabButtonsFrame
+\treturn button
+end
+
+local mainTabButton = createTabButton("Main", UDim2.new(0, 0, 0, 0))
+local visualTabButton = createTabButton("Visual", UDim2.new(0, 200, 0, 0))
+
+-- Tabs content frames inside tabsFrame
+local mainTabFrame = Instance.new("Frame")
+mainTabFrame.Name = "MainTab"
+mainTabFrame.Size = UDim2.new(1, 0, 1, 0)
+mainTabFrame.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+mainTabFrame.Visible = true
+mainTabFrame.Parent = tabsFrame
+
+local visualTabFrame = Instance.new("Frame")
+visualTabFrame.Name = "VisualTab"
+visualTabFrame.Size = UDim2.new(1, 0, 1, 0)
+visualTabFrame.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+visualTabFrame.Visible = false
+visualTabFrame.Parent = tabsFrame
+
+-- Tab button functionality
+local function setActiveTab(tab)
+\tif tab == "Main" then
+\t\tmainTabFrame.Visible = true
+\t\tvisualTabFrame.Visible = false
+\t\tmainTabButton.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
+\t\tvisualTabButton.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+\telse
+\t\tmainTabFrame.Visible = false
+\t\tvisualTabFrame.Visible = true
+\t\tmainTabButton.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+\t\tvisualTabButton.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
+\tend
+end
+
+mainTabButton.MouseButton1Click:Connect(function()
+\tsetActiveTab("Main")
+end)
+
+visualTabButton.MouseButton1Click:Connect(function()
+\tsetActiveTab("Visual")
+end)
+
+-- --- Scripts for main tab ---
+
+-- Fly script UI & logic
+local flyLabel = Instance.new("TextLabel")
+flyLabel.Size = UDim2.new(0, 120, 0, 25)
+flyLabel.Position = UDim2.new(0, 20, 0, 20)
+flyLabel.BackgroundTransparency = 1
+flyLabel.Text = "Fly"
+flyLabel.Font = Enum.Font.GothamSemibold
+flyLabel.TextSize = 18
+flyLabel.TextColor3 = Color3.new(1, 1, 1)
+flyLabel.Parent = mainTabFrame
+
+local flyToggle = Instance.new("TextButton")
+flyToggle.Size = UDim2.new(0, 80, 0, 25)
+flyToggle.Position = UDim2.new(0, 150, 0, 20)
+flyToggle.BackgroundColor3 = Color3.fromRGB(90, 90, 90)
+flyToggle.TextColor3 = Color3.new(1,1,1)
+flyToggle.Text = "Off"
+flyToggle.Font = Enum.Font.GothamSemibold
+flyToggle.TextSize = 18
+flyToggle.Parent = mainTabFrame
+
+local flySpeedLabel = Instance.new("TextLabel")
+flySpeedLabel.Size = UDim2.new(0, 120, 0, 25)
+flySpeedLabel.Position = UDim2.new(0, 20, 0, 55)
+flySpeedLabel.BackgroundTransparency = 1
+flySpeedLabel.Text = "Fly Speed"
+flySpeedLabel.Font = Enum.Font.GothamSemibold
+flySpeedLabel.TextSize = 18
+flySpeedLabel.TextColor3 = Color3.new(1, 1, 1)
+flySpeedLabel.Parent = mainTabFrame
+
+local flySpeedSlider = Instance.new("TextBox")
+flySpeedSlider.Size = UDim2.new(0, 60, 0, 25)
+flySpeedSlider.Position = UDim2.new(0, 150, 0, 55)
+flySpeedSlider.BackgroundColor3 = Color3.new(1, 1, 1)
+flySpeedSlider.TextColor3 = Color3.new(0, 0, 0)
+flySpeedSlider.Text = "50"
+flySpeedSlider.Font = Enum.Font.Gotham
+flySpeedSlider.TextSize = 18
+flySpeedSlider.ClearTextOnFocus = false
+flySpeedSlider.Parent = mainTabFrame
+
+-- Noclip script UI & logic
+local noclipLabel = Instance.new("TextLabel")
+noclipLabel.Size = UDim2.new(0, 120, 0, 25)
+noclipLabel.Position = UDim2.new(0, 20, 0, 95)
+noclipLabel.BackgroundTransparency = 1
+noclipLabel.Text = "Noclip"
+noclipLabel.Font = Enum.Font.GothamSemibold
+noclipLabel.TextSize = 18
+noclipLabel.TextColor3 = Color3.new(1, 1, 1)
+noclipLabel.Parent = mainTabFrame
+
+local noclipToggle = Instance.new("TextButton")
+noclipToggle.Size = UDim2.new(0, 80, 0, 25)
+noclipToggle.Position = UDim2.new(0, 150, 0, 95)
+noclipToggle.BackgroundColor3 = Color3.fromRGB(90, 90, 90)
+noclipToggle.TextColor3 = Color3.new(1, 1, 1)
+noclipToggle.Text = "Off"
+noclipToggle.Font = Enum.Font.GothamSemibold
+noclipToggle.TextSize = 18
+noclipToggle.Parent = mainTabFrame
+
+-- Hitbox script UI & logic
+local hitboxLabel = Instance.new("TextLabel")
+hitboxLabel.Size = UDim2.new(0, 120, 0, 25)
+hitboxLabel.Position = UDim2.new(0, 20, 0, 135)
+hitboxLabel.BackgroundTransparency = 1
+hitboxLabel.Text = "Hitbox"
+hitboxLabel.Font = Enum.Font.GothamSemibold
+hitboxLabel.TextSize = 18
+hitboxLabel.TextColor3 = Color3.new(1, 1, 1)
+hitboxLabel.Parent = mainTabFrame
+
+local hitboxToggle = Instance.new("TextButton")
+hitboxToggle.Size = UDim2.new(0, 80, 0, 25)
+hitboxToggle.Position = UDim2.new(0, 150, 0, 135)
+hitboxToggle.BackgroundColor3 = Color3.fromRGB(90, 90, 90)
+hitboxToggle.TextColor3 = Color3.new(1, 1, 1)
+hitboxToggle.Text = "Off"
+hitboxToggle.Font = Enum.Font.GothamSemibold
+hitboxToggle.TextSize = 18
+hitboxToggle.Parent = mainTabFrame
+
+local hitboxTransparencyLabel = Instance.new("TextLabel")
+hitboxTransparencyLabel.Size = UDim2.new(0, 150, 0, 20)
+hitboxTransparencyLabel.Position = UDim2.new(0, 20, 0, 165)
+hitboxTransparencyLabel.BackgroundTransparency = 1
+hitboxTransparencyLabel.Text = "Transparency (0 to 1):"
+hitboxTransparencyLabel.Font = Enum.Font.Gotham
+hitboxTransparencyLabel.TextSize = 15
+hitboxTransparencyLabel.TextColor3 = Color3.new(1, 1, 1)
+hitboxTransparencyLabel.Parent = mainTabFrame
+
+local hitboxTransparencyBox = Instance.new("TextBox")
+hitboxTransparencyBox.Size = UDim2.new(0, 40, 0, 20)
+hitboxTransparencyBox.Position = UDim2.new(0, 170, 0, 165)
+hitboxTransparencyBox.BackgroundColor3 = Color3.new(1, 1, 1)
+hitboxTransparencyBox.TextColor3 = Color3.new(0, 0, 0)
+hitboxTransparencyBox.Text = "0.5"
+hitboxTransparencyBox.Font = Enum.Font.Gotham
+hitboxTransparencyBox.TextSize = 15
+hitboxTransparencyBox.ClearTextOnFocus = false
+hitboxTransparencyBox.Parent = mainTabFrame
+
+local hitboxSizeLabel = Instance.new("TextLabel")
+hitboxSizeLabel.Size = UDim2.new(0, 150, 0, 20)
+hitboxSizeLabel.Position = UDim2.new(0, 20, 0, 190)
+hitboxSizeLabel.BackgroundTransparency = 1
+hitboxSizeLabel.Text = "Size Multiplier (1 to 5):"
+hitboxSizeLabel.Font = Enum.Font.Gotham
+hitboxSizeLabel.TextSize = 15
+hitboxSizeLabel.TextColor3 = Color3.new(1, 1, 1)
+hitboxSizeLabel.Parent = mainTabFrame
+
+local hitboxSizeBox = Instance.new("TextBox")
+hitboxSizeBox.Size = UDim2.new(0, 40, 0, 20)
+hitboxSizeBox.Position = UDim2.new(0, 170, 0, 190)
+hitboxSizeBox.BackgroundColor3 = Color3.new(1, 1, 1)
+hitboxSizeBox.TextColor3 = Color3.new(0, 0, 0)
+hitboxSizeBox.Text = "2"
+hitboxSizeBox.Font = Enum.Font.Gotham
+hitboxSizeBox.TextSize = 15
+hitboxSizeBox.ClearTextOnFocus = false
+hitboxSizeBox.Parent = mainTabFrame
+
+-- Walkspeed script UI & logic
+local walkspeedLabel = Instance.new("TextLabel")
+walkspeedLabel.Size = UDim2.new(0, 150, 0, 25)
+walkspeedLabel.Position = UDim2.new(0, 20, 0, 230)
+walkspeedLabel.BackgroundTransparency = 1
+walkspeedLabel.Text = "Walkspeed (default 16)"
+walkspeedLabel.Font = Enum.Font.GothamSemibold
+walkspeedLabel.TextSize = 18
+walkspeedLabel.TextColor3 = Color3.new(1, 1, 1)
+walkspeedLabel.Parent = mainTabFrame
+
+local walkspeedBox = Instance.new("TextBox")
+walkspeedBox.Size = UDim2.new(0, 60, 0, 25)
+walkspeedBox.Position = UDim2.new(0, 180, 0, 230)
+walkspeedBox.BackgroundColor3 = Color3.new(1, 1, 1)
+walkspeedBox.TextColor3 = Color3.new(0, 0, 0)
+walkspeedBox.Text = "16"
+walkspeedBox.Font = Enum.Font.Gotham
+walkspeedBox.TextSize = 18
+walkspeedBox.ClearTextOnFocus = false
+walkspeedBox.Parent = mainTabFrame
+
+-- --- Variables for scripts ---
+local flying = false
+local flySpeed = 50
+local noclipEnabled = false
+local hitboxEnabled = false
+local espEnabled = false
+
+local hitboxCharacters = {}
+
+-- --- Fly Script ---
+local bodyVelocity
+
+local function startFly()
+\tif flying then return end
+\tflying = true
+
+\tlocal character = player.Character
+\tif not character then return end
+
+\tlocal humanoidRootPart = character:FindFirstChild("HumanoidRootPart")
+\tif not humanoidRootPart then return end
+
+\tbodyVelocity = Instance.new("BodyVelocity")
+\tbodyVelocity.MaxForce = Vector3.new(1e5,1e5,1e5)
+\tbodyVelocity.Velocity = Vector3.new(0,0,0)
+\tbodyVelocity.Parent = humanoidRootPart
+
+\tRunService:BindToRenderStep("SmoothFly",Enum.RenderPriority.Character.Value,function()
+\t\tif not flying then
+\t\t\tRunService:UnbindFromRenderStep("SmoothFly")
+\t\t\tif bodyVelocity then
+\t\t\t\tbodyVelocity:Destroy()
+\t\t\t\tbodyVelocity = nil
+\t\t\tend
+\t\t\treturn
+\t\tend
+
+\t\tlocal cam = workspace.CurrentCamera
+\t\tlocal moveDirection = Vector3.new(0,0,0)
+\t\t
+\t\tif UserInputService:IsKeyDown(Enum.KeyCode.W) then moveDirection = moveDirection + cam.CFrame.LookVector end
+\t\tif UserInputService:IsKeyDown(Enum.KeyCode.S) then moveDirection = moveDirection - cam.CFrame.LookVector end
+\t\tif UserInputService:IsKeyDown(Enum.KeyCode.A) then moveDirection = moveDirection - cam.CFrame.RightVector end
+\t\tif UserInputService:IsKeyDown(Enum.KeyCode.D) then moveDirection = moveDirection + cam.CFrame.RightVector end
+\t\tif UserInputService:IsKeyDown(Enum.KeyCode.Space) then moveDirection = moveDirection + Vector3.new(0,1,0) end
+\t\tif UserInputService:IsKeyDown(Enum.KeyCode.LeftControl) then moveDirection = moveDirection - Vector3.new(0,1,0) end
+
+\t\tif moveDirection.Magnitude > 0 then
+\t\t\tmoveDirection = moveDirection.Unit * flySpeed
+\t\tend
+
+\t\tbodyVelocity.Velocity = moveDirection
+\tend)
+end
+
+local function stopFly()
+\tflying = false
+end
+
+flyToggle.MouseButton1Click:Connect(function()
+\tif flying then
+\t\tstopFly()
+\t\tflyToggle.Text = "Off"
+\telse
+\t\tlocal speedVal = tonumber(flySpeedSlider.Text)
+\t\tif speedVal and speedVal >= 1 and speedVal <= 500 then
+\t\t\tflySpeed = speedVal
+\t\tend
+\t\tstartFly()
+\t\tflyToggle.Text = "On"
+\tend
+end)
+
+flySpeedSlider.FocusLost:Connect(function(enterPressed)
+\tif enterPressed then
+\t\tlocal val = tonumber(flySpeedSlider.Text)
+\t\tif val and val >= 1 and val <= 500 then
+\t\t\tflySpeed = val
+\t\telse
+\t\t\tflySpeedSlider.Text = tostring(flySpeed)
+\t\tend
+\tend
+end)
+
+-- --- Noclip Script ---
+
+local function noclipLoop()
+\tfor _, part in pairs(character:GetChildren()) do
+\t\tif part:IsA("BasePart") and part.CanCollide == true then
+\t\t\tpart.CanCollide = false
+\t\tend
+\tend
+end
+
+noclipToggle.MouseButton1Click:Connect(function()
+\tif noclipEnabled then
+\t\tnoclipEnabled = false
+\t\tnoclipToggle.Text = "Off"
+\telse
+\t\tnoclipEnabled = true
+\t\tnoclipToggle.Text = "On"
+\tend
+end)
+
+RunService.Heartbeat:Connect(function()
+\tif noclipEnabled then
+\t\tnoclipLoop()
+\tend
+end)
+
+-- --- Hitbox Script ---
+local function createHitboxForCharacter(char)
+\tif hitboxCharacters[char] then return end
+\tlocal hum = char:FindFirstChildWhichIsA("Humanoid")
+\tlocal root = char:FindFirstChild("HumanoidRootPart")
+
+\tif not hum or not root then return end
+
+\tfor _, part in pairs(char:GetChildren()) do
+\t\tif part:IsA("BasePart") then
+\t\t\tlocal hb = Instance.new("BoxHandleAdornment")
+\t\t\thb.Adornee = part
+\t\t\thb.AlwaysOnTop = true
+\t\t\thb.ZIndex = 5
+\t\t\thb.Size = part.Size * tonumber(hitboxSizeBox.Text)
+\t\t\thb.Transparency = tonumber(hitboxTransparencyBox.Text)
+\t\t\thb.Color3 = Color3.fromRGB(255, 0, 0)
+\t\t\thb.Parent = part
+\t\t\thitboxCharacters[char] = hitboxCharacters[char] or {}
+\t\t\ttable.insert(hitboxCharacters[char], hb)
+\t\tend
+\tend
+end
+
+local function removeHitboxFromCharacter(char)
+\tif not hitboxCharacters[char] then return end
+\tfor _, adorn in pairs(hitboxCharacters[char]) do
+\t\tif adorn and adorn.Parent then
+\t\t\tadorn:Destroy()
+\t\tend
+\tend
+\thitboxCharacters[char] = nil
+end
+
+local function updateHitboxes()
+\tfor _, plr in pairs(Players:GetPlayers()) do
+\t\tif plr ~= player and plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") then
+\t\t\tif hitboxEnabled then
+\t\t\t\tcreateHitboxForCharacter(plr.Character)
+\t\t\telse
+\t\t\t\tremoveHitboxFromCharacter(plr.Character)
+\t\t\tend
+\t\tend
+\tend
+end
+
+hitboxToggle.MouseButton1Click:Connect(function()
+\tif hitboxEnabled then
+\t\thitboxEnabled = false
+\t\thitboxToggle.Text = "Off"
+\telse
+\t\thitboxEnabled = true
+\t\thitboxToggle.Text = "On"
+\tend
+\tupdateHitboxes()
+end)
+
+hitboxTransparencyBox.FocusLost:Connect(function(enter)
+\tlocal val = tonumber(hitboxTransparencyBox.Text)
+\tif val and val >= 0 and val <= 1 then
+\t\tupdateHitboxes()
+\telse
+\t\thitboxTransparencyBox.Text = "0.5"
+\tend
+end)
+
+hitboxSizeBox.FocusLost:Connect(function(enter)
+\tlocal val = tonumber(hitboxSizeBox.Text)
+\tif val and val >= 1 and val <= 5 then
+\t\tupdateHitboxes()
+\telse
+\t\thitboxSizeBox.Text = "2"
+\tend
+end)
+
+-- --- Walkspeed Script ---
+walkspeedBox.FocusLost:Connect(function(enter)
+\tlocal val = tonumber(walkspeedBox.Text)
+\tif val and val >= 8 and val <= 200 then
+\t\thumanoid.WalkSpeed = val
+\telse
+\t\twalkspeedBox.Text = tostring(humanoid.WalkSpeed)
+\tend
+end)
+
+-- --- Visual Tab: ESP Script ---
+
+local espToggle = Instance.new("TextButton")
+espToggle.Size = UDim2.new(0, 80, 0, 25)
+espToggle.Position = UDim2.new(0, 20, 0, 20)
+espToggle.BackgroundColor3 = Color3.fromRGB(90, 90, 90)
+espToggle.TextColor3 = Color3.new(1,1,1)
+espToggle.Text = "Off"
+espToggle.Font = Enum.Font.GothamSemibold
+espToggle.TextSize = 18
+espToggle.Parent = visualTabFrame
+
+local espLabel = Instance.new("TextLabel")
+espLabel.Size = UDim2.new(0, 120, 0, 25)
+espLabel.Position = UDim2.new(0, 110, 0, 20)
+espLabel.BackgroundTransparency = 1
+espLabel.Text = "ESP"
+espLabel.Font = Enum.Font.GothamSemibold
+espLabel.TextSize = 18
+espLabel.TextColor3 = Color3.new(1,1,1)
+espLabel.Parent = visualTabFrame
+
+local espAdorns = {}
+
+local function createESP(playerChar)
+\tif espAdorns[playerChar] then return end
+
+\tfor _, part in pairs(playerChar:GetChildren()) do
+\t\tif part:IsA("BasePart") and part.Name ~= "HumanoidRootPart" then
+\t\t\tlocal box = Instance.new("BoxHandleAdornment")
+\t\t\tbox.Adornee = part
+\t\t\tbox.AlwaysOnTop = true
+\t\t\tbox.ZIndex = 10
+\t\t\tbox.Size = part.Size
+\t\t\tbox.Transparency = 0.5
+\t\t\tbox.Color3 = Color3.fromRGB(0, 255, 0)
+\t\t\tbox.Parent = part
+\t\t\tespAdorns[playerChar] = espAdorns[playerChar] or {}
+\t\t\ttable.insert(espAdorns[playerChar], box)
+\t\tend
+\tend
+end
+
+local function removeESP(playerChar)
+\tif not espAdorns[playerChar] then return end
+\tfor _, adorn in pairs(espAdorns[playerChar]) do
+\t\tif adorn and adorn.Parent then
+\t\t\tadorn:Destroy()
+\t\tend
+\tend
+\tespAdorns[playerChar] = nil
+end
+
+local function updateESP()
+\tfor _, plr in pairs(Players:GetPlayers()) do
+\t\tif plr ~= player and plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") then
+\t\t\tif espEnabled then
+\t\t\t\tcreateESP(plr.Character)
+\t\t\telse
+\t\t\t\tremoveESP(plr.Character)
+\t\t\tend
+\t\tend
+\tend
+end
+
+espToggle.MouseButton1Click:Connect(function()
+\tespEnabled = not espEnabled
+\tespToggle.Text = espEnabled and "On" or "Off"
+\tupdateESP()
+end)
+
+-- Clean up ESP and Hitbox when players leave
+Players.PlayerRemoving:Connect(function(plr)
+\tif plr.Character then
+\t\tremoveHitboxFromCharacter(plr.Character)
+\t\tremoveESP(plr.Character)
+\tend
+end)
+
+Players.CharacterAdded:Connect(function(char)
+\twait(1)
+\tif hitboxEnabled then
+\t\tupdateHitboxes()
+\tend
+\tif espEnabled then
+\t\tupdateESP()
+\tend
+end)
+
+-- Enter pressed on key input triggers submit
+keyInputBox.FocusLost:Connect(function(enterPressed)
+\tif enterPressed then
+\t\tsubmitButton:CaptureFocus()
+\t\tsubmitButton.MouseButton1Click:Connect(function() end) -- dummy to avoid garbage collect?
+\t\tsubmitButton:ReleaseFocus()
+\t\tsubmitButton:Fire()
+\tend
+end)
+
+-- Submit button functionality
+submitButton.MouseButton1Click:Connect(function()
+\tlocal key = keyInputBox.Text
+\tif key == "C00L" then
+\t\terrorLabel.Text = ""
+\t\t-- Hide login UI
+\t\tkeyInputLabel.Visible = false
+\t\tkeyInputBox.Visible = false
+\t\tgetKeyButton.Visible = false
+\t\tsubmitButton.Visible = false
+\t\terrorLabel.Visible = false
+
+\t\t-- Show tabs & buttons
+\t\ttabsFrame.Visible = true
+\t\ttabButtonsFrame.Visible = true
+\telse
+\t\terrorLabel.Text = "Incorrect key, try again."
+\tend
+end)
