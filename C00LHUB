@@ -1,0 +1,643 @@
+-- SafeKeyMenu_FullLocal.lua  (LocalScript)
+-- Paste into StarterPlayerScripts or LocalScript under StarterGui
+-- SAFE: Local-only admin/test features. DOES NOT modify other players or create ESP through walls.
+
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+local ContextActionService = game:GetService("ContextActionService")
+
+local player = Players.LocalPlayer
+local playerGui = player:WaitForChild("PlayerGui")
+
+-- Config
+local CORRECT_PASSWORD = "C00L"
+local LINK = "https://discord.gg/WzrtHnTfS"
+
+-- ScreenGui
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = "SafeKeyMenu"
+screenGui.ResetOnSpawn = false
+screenGui.Parent = playerGui
+screenGui.IgnoreGuiInset = true
+
+-- Main frame (draggable)
+local frame = Instance.new("Frame")
+frame.Name = "MainFrame"
+frame.Size = UDim2.new(0, 520, 0, 420)
+frame.Position = UDim2.new(0.5, -260, 0.18, 0)
+frame.BackgroundColor3 = Color3.fromRGB(22,22,22)
+frame.BorderSizePixel = 0
+frame.Parent = screenGui
+local frameCorner = Instance.new("UICorner", frame); frameCorner.CornerRadius = UDim.new(0,10)
+
+-- Title bar for dragging
+local titleBar = Instance.new("Frame", frame)
+titleBar.Size = UDim2.new(1, 0, 0, 36)
+titleBar.BackgroundTransparency = 1
+
+local titleText = Instance.new("TextLabel", titleBar)
+titleText.Text = "Key System Menu"
+titleText.Size = UDim2.new(1, -80, 1, 0)
+titleText.Position = UDim2.new(0, 12, 0, 0)
+titleText.BackgroundTransparency = 1
+titleText.TextColor3 = Color3.fromRGB(240,240,240)
+titleText.Font = Enum.Font.GothamBold
+titleText.TextSize = 16
+titleText.TextXAlignment = Enum.TextXAlignment.Left
+
+local closeBtn = Instance.new("TextButton", titleBar)
+closeBtn.Text = "X"
+closeBtn.Size = UDim2.new(0, 60, 0, 26)
+closeBtn.Position = UDim2.new(1, -70, 0, 5)
+closeBtn.BackgroundColor3 = Color3.fromRGB(60,60,60)
+closeBtn.TextColor3 = Color3.fromRGB(255,255,255)
+closeBtn.Font = Enum.Font.GothamBold
+closeBtn.TextSize = 14
+local closeCorner = Instance.new("UICorner", closeBtn)
+closeBtn.MouseButton1Click:Connect(function() frame.Visible = false end)
+
+-- Left column: key & password
+local left = Instance.new("Frame", frame)
+left.Size = UDim2.new(0, 220, 1, -60)
+left.Position = UDim2.new(0, 12, 0, 44)
+left.BackgroundTransparency = 1
+
+local getKeyBtn = Instance.new("TextButton", left)
+getKeyBtn.Size = UDim2.new(1, 0, 0, 42)
+getKeyBtn.Position = UDim2.new(0, 0, 0, 0)
+getKeyBtn.Text = "Get Key (Copy Link)"
+getKeyBtn.Font = Enum.Font.GothamSemibold
+getKeyBtn.TextSize = 14
+getKeyBtn.BackgroundColor3 = Color3.fromRGB(80,80,80)
+getKeyBtn.TextColor3 = Color3.fromRGB(255,255,255)
+local getKeyCorner = Instance.new("UICorner", getKeyBtn)
+
+local linkBox = Instance.new("TextBox", left)
+linkBox.Size = UDim2.new(1, 0, 0, 36)
+linkBox.Position = UDim2.new(0, 0, 0, 52)
+linkBox.PlaceholderText = "Invite link will appear (select to copy)"
+linkBox.ClearTextOnFocus = false
+linkBox.TextWrapped = true
+linkBox.Font = Enum.Font.Gotham
+linkBox.TextSize = 13
+linkBox.BackgroundColor3 = Color3.fromRGB(38,38,38)
+linkBox.TextColor3 = Color3.fromRGB(230,230,230)
+local linkCorner = Instance.new("UICorner", linkBox)
+
+local passBox = Instance.new("TextBox", left)
+passBox.Size = UDim2.new(1, 0, 0, 36)
+passBox.Position = UDim2.new(0, 0, 0, 100)
+passBox.PlaceholderText = "Enter password"
+passBox.ClearTextOnFocus = false
+passBox.Font = Enum.Font.Gotham
+passBox.TextSize = 14
+passBox.BackgroundColor3 = Color3.fromRGB(38,38,38)
+passBox.TextColor3 = Color3.fromRGB(230,230,230)
+local passCorner = Instance.new("UICorner", passBox)
+
+local submitBtn = Instance.new("TextButton", left)
+submitBtn.Size = UDim2.new(1, 0, 0, 36)
+submitBtn.Position = UDim2.new(0, 0, 0, 148)
+submitBtn.Text = "Submit"
+submitBtn.Font = Enum.Font.GothamSemibold
+submitBtn.TextSize = 14
+submitBtn.BackgroundColor3 = Color3.fromRGB(88,88,88)
+submitBtn.TextColor3 = Color3.fromRGB(255,255,255)
+local submitCorner = Instance.new("UICorner", submitBtn)
+
+local statusLabel = Instance.new("TextLabel", left)
+statusLabel.Size = UDim2.new(1, 0, 0, 28)
+statusLabel.Position = UDim2.new(0, 0, 0, 190)
+statusLabel.BackgroundTransparency = 1
+statusLabel.Text = "Locked"
+statusLabel.Font = Enum.Font.Gotham
+statusLabel.TextSize = 14
+statusLabel.TextColor3 = Color3.fromRGB(200,60,60)
+
+-- Right column: Tabs
+local right = Instance.new("Frame", frame)
+right.Size = UDim2.new(1, -252, 1, -60)
+right.Position = UDim2.new(0, 236, 0, 44)
+right.BackgroundTransparency = 1
+
+local tabsRow = Instance.new("Frame", right)
+tabsRow.Size = UDim2.new(1, 0, 0, 36)
+tabsRow.Position = UDim2.new(0, 0, 0, 0)
+tabsRow.BackgroundTransparency = 1
+
+local mainTabBtn = Instance.new("TextButton", tabsRow)
+mainTabBtn.Size = UDim2.new(0, 120, 1, 0)
+mainTabBtn.Position = UDim2.new(0, 0, 0, 0)
+mainTabBtn.Text = "Main"
+mainTabBtn.Font = Enum.Font.GothamSemibold
+mainTabBtn.TextSize = 14
+mainTabBtn.BackgroundColor3 = Color3.fromRGB(70,70,70)
+mainTabBtn.TextColor3 = Color3.fromRGB(255,255,255)
+
+local visualTabBtn = Instance.new("TextButton", tabsRow)
+visualTabBtn.Size = UDim2.new(0, 120, 1, 0)
+visualTabBtn.Position = UDim2.new(0, 132, 0, 0)
+visualTabBtn.Text = "Visual"
+visualTabBtn.Font = Enum.Font.GothamSemibold
+visualTabBtn.TextSize = 14
+visualTabBtn.BackgroundColor3 = Color3.fromRGB(48,48,48)
+visualTabBtn.TextColor3 = Color3.fromRGB(255,255,255)
+
+local mainContent = Instance.new("Frame", right)
+mainContent.BackgroundTransparency = 1
+mainContent.Size = UDim2.new(1, 0, 1, -44)
+mainContent.Position = UDim2.new(0, 0, 0, 44)
+
+local visualContent = Instance.new("Frame", right)
+visualContent.BackgroundTransparency = 1
+visualContent.Size = mainContent.Size
+visualContent.Position = mainContent.Position
+visualContent.Visible = false
+
+-- --- MAIN tab UI elements ---
+-- Fly
+local flyLabel = Instance.new("TextLabel", mainContent)
+flyLabel.Size = UDim2.new(0, 200, 0, 24)
+flyLabel.Position = UDim2.new(0, 0, 0, 4)
+flyLabel.BackgroundTransparency = 1
+flyLabel.Text = "Fly (local; mobile+PC)"
+flyLabel.Font = Enum.Font.Gotham
+flyLabel.TextSize = 14
+flyLabel.TextColor3 = Color3.fromRGB(230,230,230)
+
+local flyToggle = Instance.new("TextButton", mainContent)
+flyToggle.Size = UDim2.new(0, 80, 0, 28)
+flyToggle.Position = UDim2.new(0, 208, 0, 4)
+flyToggle.Text = "Off"
+flyToggle.Font = Enum.Font.GothamSemibold
+flyToggle.TextSize = 14
+flyToggle.BackgroundColor3 = Color3.fromRGB(70,70,70)
+local flyCorner = Instance.new("UICorner", flyToggle)
+
+local flySpeedLabel = Instance.new("TextLabel", mainContent)
+flySpeedLabel.Size = UDim2.new(0, 200, 0, 18)
+flySpeedLabel.Position = UDim2.new(0, 0, 0, 36)
+flySpeedLabel.BackgroundTransparency = 1
+flySpeedLabel.Text = "Fly Speed: 40"
+flySpeedLabel.Font = Enum.Font.Gotham
+flySpeedLabel.TextSize = 12
+flySpeedLabel.TextColor3 = Color3.fromRGB(220,220,220)
+
+local flySpeedBox = Instance.new("TextBox", mainContent)
+flySpeedBox.Size = UDim2.new(0, 120, 0, 28)
+flySpeedBox.Position = UDim2.new(0, 208, 0, 32)
+flySpeedBox.Text = "40"
+flySpeedBox.PlaceholderText = "Speed"
+flySpeedBox.Font = Enum.Font.Gotham
+flySpeedBox.TextSize = 14
+flySpeedBox.BackgroundColor3 = Color3.fromRGB(50,50,50)
+
+-- Mobile up/down buttons (hidden on PC)
+local mobileUp = Instance.new("TextButton", mainContent)
+mobileUp.Size = UDim2.new(0, 48, 0, 36)
+mobileUp.Position = UDim2.new(0, 340, 0, 8)
+mobileUp.Text = "▲"
+mobileUp.Visible = UserInputService.TouchEnabled
+mobileUp.Font = Enum.Font.GothamBold
+mobileUp.TextSize = 18
+mobileUp.BackgroundColor3 = Color3.fromRGB(70,70,70)
+local mobileDown = Instance.new("TextButton", mainContent)
+mobileDown.Size = UDim2.new(0, 48, 0, 36)
+mobileDown.Position = UDim2.new(0, 392, 0, 8)
+mobileDown.Text = "▼"
+mobileDown.Visible = UserInputService.TouchEnabled
+mobileDown.Font = Enum.Font.GothamBold
+mobileDown.TextSize = 18
+mobileDown.BackgroundColor3 = Color3.fromRGB(70,70,70)
+
+-- Noclip (local only)
+local noclipLabel = Instance.new("TextLabel", mainContent)
+noclipLabel.Size = UDim2.new(0, 200, 0, 24)
+noclipLabel.Position = UDim2.new(0, 0, 0, 72)
+noclipLabel.BackgroundTransparency = 1
+noclipLabel.Text = "Noclip (local only)"
+noclipLabel.Font = Enum.Font.Gotham
+noclipLabel.TextSize = 14
+noclipLabel.TextColor3 = Color3.fromRGB(230,230,230)
+
+local noclipToggle = Instance.new("TextButton", mainContent)
+noclipToggle.Size = UDim2.new(0, 80, 0, 28)
+noclipToggle.Position = UDim2.new(0, 208, 0, 72)
+noclipToggle.Text = "Off"
+noclipToggle.Font = Enum.Font.GothamSemibold
+noclipToggle.TextSize = 14
+noclipToggle.BackgroundColor3 = Color3.fromRGB(70,70,70)
+
+-- Hitbox (local only: adjust own size & transparency)
+local hitLabel = Instance.new("TextLabel", mainContent)
+hitLabel.Size = UDim2.new(0, 360, 0, 24)
+hitLabel.Position = UDim2.new(0, 0, 0, 112)
+hitLabel.BackgroundTransparency = 1
+hitLabel.Text = "Hitbox (your character only) - Scale & Body Transparency"
+hitLabel.Font = Enum.Font.Gotham
+hitLabel.TextSize = 13
+hitLabel.TextColor3 = Color3.fromRGB(220,220,220)
+
+local hitScaleBox = Instance.new("TextBox", mainContent)
+hitScaleBox.Size = UDim2.new(0, 120, 0, 28)
+hitScaleBox.Position = UDim2.new(0, 372, 0, 108)
+hitScaleBox.Text = "1"
+hitScaleBox.PlaceholderText = "Scale (0.5-3)"
+hitScaleBox.Font = Enum.Font.Gotham
+hitScaleBox.TextSize = 14
+hitScaleBox.BackgroundColor3 = Color3.fromRGB(50,50,50)
+
+local hitTransBox = Instance.new("TextBox", mainContent)
+hitTransBox.Size = UDim2.new(0, 120, 0, 28)
+hitTransBox.Position = UDim2.new(0, 372, 0, 144)
+hitTransBox.Text = "0"
+hitTransBox.PlaceholderText = "Transparency (0-1)"
+hitTransBox.Font = Enum.Font.Gotham
+hitTransBox.TextSize = 14
+hitTransBox.BackgroundColor3 = Color3.fromRGB(50,50,50)
+
+-- WalkSpeed
+local walkLabel = Instance.new("TextLabel", mainContent)
+walkLabel.Size = UDim2.new(0, 200, 0, 24)
+walkLabel.Position = UDim2.new(0, 0, 0, 168)
+walkLabel.BackgroundTransparency = 1
+walkLabel.Text = "WalkSpeed (your player)"
+walkLabel.Font = Enum.Font.Gotham
+walkLabel.TextSize = 14
+walkLabel.TextColor3 = Color3.fromRGB(230,230,230)
+
+local walkBox = Instance.new("TextBox", mainContent)
+walkBox.Size = UDim2.new(0, 120, 0, 28)
+walkBox.Position = UDim2.new(0, 208, 0, 168)
+walkBox.Text = tostring(16)
+walkBox.PlaceholderText = "Speed"
+walkBox.Font = Enum.Font.Gotham
+walkBox.TextSize = 14
+walkBox.BackgroundColor3 = Color3.fromRGB(50,50,50)
+
+local mainInfo = Instance.new("TextLabel", mainContent)
+mainInfo.Size = UDim2.new(1, -8, 0, 60)
+mainInfo.Position = UDim2.new(0, 0, 0, 212)
+mainInfo.BackgroundTransparency = 1
+mainInfo.TextWrapped = true
+mainInfo.Text = "This menu's Noclip/Hitbox/ESP are LOCAL-ONLY or TEAM-HIGHLIGHT and intended for testing in YOUR OWN game. I will not provide cheats that affect other players or reveal players through walls."
+mainInfo.Font = Enum.Font.Gotham
+mainInfo.TextSize = 12
+mainInfo.TextColor3 = Color3.fromRGB(190,190,190)
+
+-- --- VISUAL tab UI ---
+local highlightLabel = Instance.new("TextLabel", visualContent)
+highlightLabel.Size = UDim2.new(0, 300, 0, 24)
+highlightLabel.Position = UDim2.new(0, 0, 0, 4)
+highlightLabel.BackgroundTransparency = 1
+highlightLabel.Text = "Highlight teammates (local-only)"
+highlightLabel.Font = Enum.Font.Gotham
+highlightLabel.TextSize = 14
+highlightLabel.TextColor3 = Color3.fromRGB(230,230,230)
+
+local highlightToggle = Instance.new("TextButton", visualContent)
+highlightToggle.Size = UDim2.new(0, 80, 0, 28)
+highlightToggle.Position = UDim2.new(0, 312, 0, 4)
+highlightToggle.Text = "Off"
+highlightToggle.Font = Enum.Font.GothamSemibold
+highlightToggle.TextSize = 14
+highlightToggle.BackgroundColor3 = Color3.fromRGB(70,70,70)
+
+-- Tab switching helper
+local function setActiveTab(name)
+    if name == "Main" then
+        mainContent.Visible = true
+        visualContent.Visible = false
+        mainTabBtn.BackgroundColor3 = Color3.fromRGB(70,70,70)
+        visualTabBtn.BackgroundColor3 = Color3.fromRGB(48,48,48)
+    else
+        mainContent.Visible = false
+        visualContent.Visible = true
+        mainTabBtn.BackgroundColor3 = Color3.fromRGB(48,48,48)
+        visualTabBtn.BackgroundColor3 = Color3.fromRGB(70,70,70)
+    end
+end
+
+mainTabBtn.MouseButton1Click:Connect(function() setActiveTab("Main") end)
+visualTabBtn.MouseButton1Click:Connect(function() setActiveTab("Visual") end)
+setActiveTab("Main")
+
+-- Initially locked
+local unlocked = false
+local function setLocked(lock)
+    unlocked = not not (not lock)
+    mainTabBtn.Visible = unlocked
+    visualTabBtn.Visible = unlocked
+    mainContent.Visible = unlocked
+    visualContent.Visible = false
+    statusLabel.Text = unlocked and "Unlocked" or "Locked"
+    statusLabel.TextColor3 = unlocked and Color3.fromRGB(90,200,90) or Color3.fromRGB(200,60,60)
+end
+setLocked(true)
+
+-- Get Key (try setclipboard in Studio, fallback to filling textbox)
+getKeyBtn.MouseButton1Click:Connect(function()
+    local ok, err = pcall(function() setclipboard(LINK) end)
+    linkBox.Text = LINK
+    linkBox:CaptureFocus()
+    linkBox.SelectionStart = 1
+    linkBox.SelectionLength = #linkBox.Text
+    if ok then
+        statusLabel.Text = "Link copied to clipboard (Studio)."
+        statusLabel.TextColor3 = Color3.fromRGB(120,220,120)
+    else
+        statusLabel.Text = "Link filled. Select & copy manually."
+        statusLabel.TextColor3 = Color3.fromRGB(220,200,80)
+    end
+end)
+
+-- Submit password
+submitBtn.MouseButton1Click:Connect(function()
+    if tostring(passBox.Text or "") == CORRECT_PASSWORD then
+        setLocked(false)
+    else
+        statusLabel.Text = "Incorrect password"
+        statusLabel.TextColor3 = Color3.fromRGB(220,80,80)
+    end
+end)
+
+-- Make GUI draggable via titleBar
+local dragging, dragStart, startPos
+titleBar.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        dragging = true
+        dragStart = input.Position
+        startPos = frame.Position
+        input.Changed:Connect(function()
+            if input.UserInputState == Enum.UserInputState.End then
+                dragging = false
+            end
+        end)
+    end
+end)
+RunService.RenderStepped:Connect(function()
+    if dragging and dragStart and startPos then
+        local current = UserInputService:GetMouseLocation()
+        local delta = current - dragStart
+        local newX = startPos.X.Offset + delta.X
+        local newY = startPos.Y.Offset + delta.Y
+        frame.Position = UDim2.new(startPos.X.Scale, newX, startPos.Y.Scale, newY)
+    end
+end)
+
+-- ---------- Fly implementation (works on PC and mobile) ----------
+local flyEnabled = false
+local flySpeed = 40
+local flyConn
+local mobileUpPressed = false
+local mobileDownPressed = false
+
+local function getCharacterParts(char)
+    if not char then return nil end
+    local hrp = char:FindFirstChild("HumanoidRootPart")
+    local hum = char:FindFirstChildOfClass("Humanoid")
+    return hrp, hum
+end
+
+local function enableFly()
+    if flyEnabled then return end
+    local char = player.Character
+    if not char then return end
+    local hrp, hum = getCharacterParts(char)
+    if not hrp or not hum then return end
+    -- set platformstand to allow physics-free movement
+    hum.PlatformStand = true
+
+    flyConn = RunService.RenderStepped:Connect(function(dt)
+        if not flyEnabled then return end
+        local cam = workspace.CurrentCamera
+        if not cam then return end
+
+        local move = Vector3.new()
+        -- PC keyboard movement
+        if UserInputService:IsKeyDown(Enum.KeyCode.W) then move = move + cam.CFrame.LookVector end
+        if UserInputService:IsKeyDown(Enum.KeyCode.S) then move = move - cam.CFrame.LookVector end
+        if UserInputService:IsKeyDown(Enum.KeyCode.A) then move = move - cam.CFrame.RightVector end
+        if UserInputService:IsKeyDown(Enum.KeyCode.D) then move = move + cam.CFrame.RightVector end
+        if UserInputService:IsKeyDown(Enum.KeyCode.Space) then move = move + Vector3.new(0,1,0) end
+        if UserInputService:IsKeyDown(Enum.KeyCode.LeftControl) then move = move - Vector3.new(0,1,0) end
+
+        -- Mobile: use on-screen up/down buttons
+        if mobileUpPressed then move = move + Vector3.new(0,1,0) end
+        if mobileDownPressed then move = move - Vector3.new(0,1,0) end
+
+        -- If no input on PC, allow small forward movement when user touches screen and drags (mobile camera control)
+        -- But we won't add complex virtual joystick here — we rely on camera orientation and up/down buttons for mobile.
+
+        if move.Magnitude > 0 then
+            move = move.Unit
+            hrp.CFrame = hrp.CFrame + move * (flySpeed * dt)
+        end
+    end)
+end
+
+local function disableFly()
+    local char = player.Character
+    if char then
+        local hrp, hum = getCharacterParts(char)
+        if hum then hum.PlatformStand = false end
+    end
+    if flyConn then flyConn:Disconnect(); flyConn = nil end
+end
+
+flyToggle.MouseButton1Click:Connect(function()
+    if not unlocked then return end
+    flyEnabled = not flyEnabled
+    flyToggle.Text = flyEnabled and "On" or "Off"
+    if flyEnabled then
+        flySpeed = tonumber(flySpeedBox.Text) or flySpeed
+        flySpeedLabel.Text = "Fly Speed: "..tostring(flySpeed)
+        enableFly()
+    else
+        disableFly()
+    end
+end)
+
+flySpeedBox.FocusLost:Connect(function()
+    local v = tonumber(flySpeedBox.Text)
+    if v and v > 0 and v <= 2000 then
+        flySpeed = v
+        flySpeedLabel.Text = "Fly Speed: "..tostring(v)
+    else
+        flySpeedBox.Text = tostring(flySpeed)
+    end
+end)
+
+-- Mobile buttons handlers
+mobileUp.MouseButton1Down:Connect(function() mobileUpPressed = true end)
+mobileUp.MouseButton1Up:Connect(function() mobileUpPressed = false end)
+mobileDown.MouseButton1Down:Connect(function() mobileDownPressed = true end)
+mobileDown.MouseButton1Up:Connect(function() mobileDownPressed = false end)
+
+-- ---------- Noclip (local-only) ----------
+local noclipEnabled = false
+local function applyLocalNoclip(on)
+    local char = player.Character
+    if not char then return end
+    for _, part in pairs(char:GetDescendants()) do
+        if part:IsA("BasePart") then
+            part.CanCollide = not on and true or false
+        end
+    end
+end
+
+noclipToggle.MouseButton1Click:Connect(function()
+    if not unlocked then return end
+    noclipEnabled = not noclipEnabled
+    noclipToggle.Text = noclipEnabled and "On" or "Off"
+    applyLocalNoclip(noclipEnabled)
+end)
+
+-- ---------- Hitbox local-only: scale and transparency ----------
+local function applyLocalHitboxScaleAndTransparency(scale, trans)
+    local char = player.Character
+    if not char then return end
+    scale = math.clamp(scale or 1, 0.5, 3)
+    trans = math.clamp(trans or 0, 0, 1)
+    -- Adjust HumanoidRootPart size for a simple hitbox effect (local-only)
+    local hrp = char:FindFirstChild("HumanoidRootPart")
+    if hrp and hrp:IsA("BasePart") then
+        hrp.Size = Vector3.new(2 * scale, 2 * scale, 1 * scale)
+    end
+    -- Apply transparency to body parts (local-only)
+    for _, part in pairs(char:GetDescendants()) do
+        if part:IsA("BasePart") and part.Name ~= "HumanoidRootPart" then
+            part.LocalTransparencyModifier = trans
+        end
+        if part:IsA("Decal") or part:IsA("Texture") then
+            -- leave decals alone
+        end
+    end
+end
+
+hitScaleBox.FocusLost:Connect(function()
+    if not unlocked then return end
+    local s = tonumber(hitScaleBox.Text)
+    local t = tonumber(hitTransBox.Text)
+    if s and s >= 0.5 and s <= 3 then
+        applyLocalHitboxScaleAndTransparency(s, tonumber(t) or 0)
+    else
+        hitScaleBox.Text = "1"
+    end
+end)
+
+hitTransBox.FocusLost:Connect(function()
+    if not unlocked then return end
+    local s = tonumber(hitScaleBox.Text) or 1
+    local t = tonumber(hitTransBox.Text)
+    if t ~= nil and t >= 0 and t <= 1 then
+        applyLocalHitboxScaleAndTransparency(s, t)
+    else
+        hitTransBox.Text = "0"
+    end
+end)
+
+-- ---------- WalkSpeed (local player) ----------
+walkBox.FocusLost:Connect(function()
+    if not unlocked then return end
+    local val = tonumber(walkBox.Text)
+    if val and val >= 6 and val <= 500 then
+        local char = player.Character
+        local hum = char and char:FindFirstChildOfClass("Humanoid")
+        if hum then hum.WalkSpeed = val end
+    else
+        local char = player.Character
+        local hum = char and char:FindFirstChildOfClass("Humanoid")
+        walkBox.Text = tostring(hum and hum.WalkSpeed or 16)
+    end
+end)
+
+-- Reapply local settings on respawn
+player.CharacterAdded:Connect(function(char)
+    wait(0.15)
+    -- reapply walk speed
+    local h = char:FindFirstChildOfClass("Humanoid")
+    if h then
+        local w = tonumber(walkBox.Text)
+        if w then h.WalkSpeed = w end
+    end
+    -- reapply noclip
+    if noclipEnabled then
+        wait(0.1)
+        applyLocalNoclip(true)
+    end
+    -- reapply hitbox/transparency
+    local s = tonumber(hitScaleBox.Text) or 1
+    local t = tonumber(hitTransBox.Text) or 0
+    applyLocalHitboxScaleAndTransparency(s, t)
+    -- reapply fly (reset)
+    if flyEnabled then
+        disableFly()
+        wait(0.1)
+        enableFly()
+    end
+end)
+
+-- ---------- Visual: local teammate highlights (safe) ----------
+local highlights = {}
+local highlightEnabled = false
+
+local function enableHighlights()
+    -- destroy old
+    for k,v in pairs(highlights) do
+        if v and v.Parent then v:Destroy() end
+    end
+    highlights = {}
+    local myTeam = player.Team
+    for _, plr in pairs(Players:GetPlayers()) do
+        if plr ~= player and plr.Team == myTeam and plr.Character then
+            local h = Instance.new("Highlight")
+            h.Name = "LocalTeamHighlight"
+            h.Adornee = plr.Character
+            h.Parent = playerGui
+            h.Enabled = true
+            highlights[plr] = h
+        end
+    end
+end
+
+local function disableHighlights()
+    for k,v in pairs(highlights) do
+        if v and v.Parent then v:Destroy() end
+    end
+    highlights = {}
+end
+
+highlightToggle.MouseButton1Click:Connect(function()
+    if not unlocked then return end
+    highlightEnabled = not highlightEnabled
+    highlightToggle.Text = highlightEnabled and "On" or "Off"
+    if highlightEnabled then
+        enableHighlights()
+    else
+        disableHighlights()
+    end
+end)
+
+Players.PlayerAdded:Connect(function(plr)
+    if highlightEnabled then enableHighlights() end
+end)
+Players.PlayerRemoving:Connect(function(plr)
+    if highlights[plr] then
+        if highlights[plr].Parent then highlights[plr]:Destroy() end
+        highlights[plr] = nil
+    end
+    if highlightEnabled then enableHighlights() end
+end)
+Players.PlayerAdded:Connect(function(plr)
+    plr:GetPropertyChangedSignal("Team"):Connect(function() if highlightEnabled then enableHighlights() end end)
+end)
+
+-- Hide tabs until unlocked
+mainTabBtn.Visible = false
+visualTabBtn.Visible = false
+mainContent.Visible = false
+visualContent.Visible = false
+
+-- End of script
